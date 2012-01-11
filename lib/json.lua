@@ -18,17 +18,21 @@ limitations under the License.
 
 local Yajl = require('yajl')
 local Table = require('table')
+local JSONParser = {}
+JSONParser.prototype = {}
 local JSON = {
   null = Yajl.null
 }
 
-function JSON.parse(string, options)
+function JSONParser.prototype.parse(string)
+  self.parser:parse(string)
+  self.
+
+function JSONParser.new()
   local root = {}
   local current = root
   local key
-  local null = JSON.null
   local stack = {}
-  local null = options and options.use_null and JSON.null
   local parser = Yajl.new_parser({
     on_null = function ()
       current[key or #current + 1] = null
@@ -67,6 +71,13 @@ function JSON.parse(string, options)
       current = Table.remove(stack)
     end
   })
+  return parser
+end
+
+function JSON.parse(string, options)
+  local null = JSON.null
+  local null = options and options.use_null and JSON.null
+
   if options then
     options.use_null = nil
     if options then
