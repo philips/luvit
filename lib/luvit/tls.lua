@@ -26,6 +26,8 @@ local table = require('table')
 local net = require('net')
 local bind = require('utils').bind
 
+local Error = require('core').Error
+
 local string = require('string')
 local fmt = string.format
 
@@ -221,7 +223,7 @@ function CryptoStream:done(d)
   end
 
   if d then
-    self:write(d);
+    self:write(d)
   end
 
   self.writable = false
@@ -279,7 +281,6 @@ function CryptoStream:_push()
       chunkBytes, tmpData = self:_pusher()
 
       if self.pair.ssl and self.pair.ssl:getError() then
-        p('push error')
         self.pair:err()
         return
       end
@@ -305,7 +306,7 @@ function CryptoStream:_push()
     else
       dbg('cleartext emit data with ' .. #data .. ' bytes')
     end
-    self:emit('data', data);
+    self:emit('data', data)
   end
 end
 
@@ -593,10 +594,14 @@ end
 function SecurePair:err()
   dbg('SecurePair:err')
   if self._secureEstablished == false then
-    local err = self.ssl:getError()
-    if not err then
+    local ssl_err, ssl_err_str = self.ssl:getError()
+    local err = nil
+    if not ssl_err then
       err = Error:new('socket hang up')
       err.code = 'ECONNRESET'
+    else
+      err = Error:new(ssl_err_str)
+      err.code = ssl_err
     end
     self:emit('error', err)
     self:destroy()
@@ -632,7 +637,7 @@ function pipe(pair, socket)
     cleartext:emit('timeout')
   end
 
-  socket:on('error', onerror);
+  socket:on('error', onerror)
   socket:on('end', onend)
   socket:on('timeout', ontimeout)
 
@@ -667,7 +672,7 @@ function Server:initialize(...)
     secureProtocol = self.secureProtocol,
     secureOptions = self.secureOptions,
     sessionIdContext = self.sessionIdContext
-  });
+  })
 
   -- Constructor
   net.Server.initialize(self, function(socket)
@@ -686,6 +691,7 @@ function Server:initialize(...)
         self:emit('secureConnection', cleartext, pair.encrypted)
       else
         local verifyError = pair.ssl:verifyError()
+        p(verifyError)
         if verifyError then
           pair.cleartext.authorizationError = verifyError
           if self.rejectUnauthorized == true then
@@ -701,7 +707,7 @@ function Server:initialize(...)
 
     end)
     pair:on('error', function(err)
-      dbg('on error' .. err)
+      self:emit('clientError', err)
     end)
   end)
 
@@ -766,7 +772,7 @@ function Server:setOptions(options)
     self.secureProtocol = options.secureProtocol
   end
 
-  self.secureOptions = options.secureOptions or 0;
+  self.secureOptions = options.secureOptions or 0
 
   if options.honorCipherOrder then
     -- TODO
